@@ -63,3 +63,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
+                              
+
+### Other licenses
+Some parts, libraries and modules may have a different license, authors and copyright holders which is include along the library (Dropbox SDK (custom?, looks like MIT), json-simple (Apache v2.0), react-native-swipeout (MIT),...)
