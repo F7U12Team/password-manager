@@ -25,12 +25,8 @@ import com.facebook.react.bridge.*;
 
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import cerrojoandroid.Cerrojoandroid;
-import com.dropbox.client2.DropboxAPI;
-import com.dropbox.client2.DropboxAPI.Entry;
-import com.dropbox.client2.android.AndroidAuthSession;
-import com.dropbox.client2.android.AuthActivity;
-import com.dropbox.client2.session.AccessTokenPair;
-import com.dropbox.client2.session.AppKeyPair;
+
+import com.dropbox.core.android.Auth;
 
 public class DropBoxModule extends ReactContextBaseJavaModule {
 
@@ -48,7 +44,6 @@ public class DropBoxModule extends ReactContextBaseJavaModule {
     //private static final String APP_KEY = "YOUR DROP BOX KEY";
     //private static final String APP_SECRET = "YOUR DROP BOX SECRET";
     private static final String APP_KEY = "YOUR DROP BOX KEY";
-    private static final String APP_SECRET = "YOUR DROP BOX SECRET";
 
     ///////////////////////////////////////////////////////////////////////////
     //                      End app-specific settings.                       //
@@ -59,18 +54,15 @@ public class DropBoxModule extends ReactContextBaseJavaModule {
     private static final String ACCESS_KEY_NAME = "ACCESS_KEY";
     private static final String ACCESS_SECRET_NAME = "ACCESS_SECRET";
 
-    private static final boolean USE_OAUTH1 = false;
-    DropboxAPI<AndroidAuthSession> mApi;
+    //DropboxAPI<AndroidAuthSession> mApi;
     private boolean mLoggedIn;
     public static DropBoxModule self;
+    private static String token;
 
     public DropBoxModule(ReactApplicationContext reactContext) {
         super(reactContext);
         DropBoxModule.rc = reactContext;
 
-        // We create a new AuthSession so that we can use the Dropbox API.
-        AndroidAuthSession session = buildSession();
-        mApi = new DropboxAPI<AndroidAuthSession>(session);
         DropBoxModule.self = this;
     }
 
@@ -80,7 +72,6 @@ public class DropBoxModule extends ReactContextBaseJavaModule {
     }
 
     private void logOut() {
-        mApi.getSession().unlink();
         setLoggedIn(false);
     }
 
@@ -91,17 +82,11 @@ public class DropBoxModule extends ReactContextBaseJavaModule {
 
         mLoggedIn = loggedIn;
         if (!loggedIn) {
+            DropBoxModule.token = "";
             Cerrojoandroid.dropboxToken("");
         } else {
-            String oauth2AccessToken = mApi.getSession().getOAuth2AccessToken();
-            Cerrojoandroid.dropboxToken(oauth2AccessToken);
+            Cerrojoandroid.dropboxToken(DropBoxModule.token);
         }
-    }
-
-    private AndroidAuthSession buildSession() {
-        AppKeyPair appKeyPair = new AppKeyPair(APP_KEY, APP_SECRET);
-        AndroidAuthSession session = new AndroidAuthSession(appKeyPair);
-        return session;
     }
 
     @ReactMethod
@@ -110,17 +95,8 @@ public class DropBoxModule extends ReactContextBaseJavaModule {
             if (mLoggedIn) {
                 logOut();
             } else {
-                // Start the remote authentication
-                if (USE_OAUTH1) {
-                    mApi.getSession().startAuthentication(rc);
-                } else {
-                    mApi.getSession().startOAuth2Authentication(rc);
-                }
+                Auth.startOAuth2Authentication(rc, APP_KEY);
             }
-
-            setLoggedIn(mApi.getSession().isLinked());
-
-
             WritableMap map = Arguments.createMap();
             map.putString("result", "nothing");
             promise.resolve(map);
@@ -132,10 +108,11 @@ public class DropBoxModule extends ReactContextBaseJavaModule {
 
     public void returnFromDropbox() {
         Log.d(TAG, "ON RESUME DROPBOX");
-        AndroidAuthSession session = mApi.getSession();
-        if (session.authenticationSuccessful()) {
+        String accessToken = Auth.getOAuth2Token();
+        //assume it's logged?
+        if (accessToken!="") {
             try {
-                session.finishAuthentication();
+                DropBoxModule.token = accessToken;
                 setLoggedIn(true);
             } catch (IllegalStateException e) {
                 Log.i(TAG, "Error authenticating", e);
