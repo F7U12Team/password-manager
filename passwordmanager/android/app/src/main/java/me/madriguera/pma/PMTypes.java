@@ -22,5 +22,6 @@ public class PMTypes {
     public static final int NONE = 0;
     public static final int OFFLINE = 1;
     public static final int DROPBOX = 2;
+    public static final int GOOGLEDRIVE = 3;
 
 }

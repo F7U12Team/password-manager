@@ -27,12 +27,24 @@ public class GoCallback implements JavaCallback {
     private String TAG = "GoCallback";
 
     public void setDropboxStatus(boolean ok) {
-        Log.d(TAG, "SET SYNC ");
         if(ok) {
             PMModule.setSyncStatus(PMTypes.DROPBOX);
         } else {
             // no es del todo correcto
-            PMModule.setSyncStatus(PMTypes.OFFLINE);
+            //PMModule.setSyncStatus(PMTypes.OFFLINE);
+        }
+        if(ok) {
+            WritableMap params = Arguments.createMap();
+            PMModule.sendEvent("goConnectDialog", params);
+        }
+    }
+
+    public void setGoogleDriveStatus(boolean ok) {
+        if(ok) {
+            PMModule.setSyncStatus(PMTypes.GOOGLEDRIVE);
+        } else {
+            // no es del todo correcto
+            //PMModule.setSyncStatus(PMTypes.OFFLINE);
         }
         if(ok) {
             WritableMap params = Arguments.createMap();
@@ -41,8 +53,6 @@ public class GoCallback implements JavaCallback {
     }
 
     public void sendEvent(String event, String data) {
-        Log.d(TAG, "SENDEVENT [EVENT] " + event);
-        Log.d(TAG, "SENDEVENT [DATA] " + data);
         WritableMap params = Arguments.createMap();
         params.putString("data", data);
         PMModule.sendEvent(event, params);

@@ -28,6 +28,15 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+
+
+          <intent-filter>
+              <data android:scheme="YOUR DROPBOX CLIENT ID" />
+
+              <action android:name="android.intent.action.VIEW" />
+              <category android:name="android.intent.category.BROWSABLE" />
+              <category android:name="android.intent.category.DEFAULT" />
+          </intent-filter>
       </activity>
 
         <activity
@@ -35,12 +44,9 @@
                 android:configChanges="orientation|keyboard"
                 android:launchMode="singleTask">
             <intent-filter>
-
-                <!-- Insert your app key after “db-  ...” -->
                 <data android:scheme="YOUR DROPBOX CLIENT ID" />
 
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.BROWSABLE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>

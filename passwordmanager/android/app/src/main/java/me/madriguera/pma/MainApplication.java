@@ -43,6 +43,7 @@ public class MainApplication extends Application implements ReactApplication {
       return Arrays.<ReactPackage>asList(
           new MainReactPackage(),
           new PMPackage(),
+          new GoogleDrivePackage(),
           new DropBoxPackage(),
           new VectorIconsPackage(),
           new FilePickerPackage()

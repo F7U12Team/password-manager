@@ -101,21 +101,21 @@ public class DropBoxModule extends ReactContextBaseJavaModule {
             map.putString("result", "nothing");
             promise.resolve(map);
         } catch (Exception e) {
-            Log.e(TAG, "Solve error: " + e.toString());
+            //Log.e(TAG, "Solve error: " + e.toString());
             promise.reject(e);
         }
     }
 
     public void returnFromDropbox() {
-        Log.d(TAG, "ON RESUME DROPBOX");
         String accessToken = Auth.getOAuth2Token();
+        //Log.d(TAG, "ON RESUME DROPBOX " + accessToken);
         //assume it's logged?
         if (accessToken!="") {
             try {
                 DropBoxModule.token = accessToken;
                 setLoggedIn(true);
             } catch (IllegalStateException e) {
-                Log.i(TAG, "Error authenticating", e);
+                //Log.i(TAG, "Error authenticating", e);
             }
         }
     }

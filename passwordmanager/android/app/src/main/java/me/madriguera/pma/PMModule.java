@@ -51,12 +51,12 @@ public class PMModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void inputPin(String pin, Promise promise) {
         try {
-            Log.d(TAG,"TESORO PIN:  " + pin);
+            //Log.d(TAG,"TESORO PIN:  " + pin);
             Cerrojoandroid.inputPin(pin);
             WritableMap map = Arguments.createMap();
             promise.resolve(map);
         } catch (Exception e) {
-            Log.e(TAG, "Solve error: " + e.toString());
+            //Log.e(TAG, "Solve error: " + e.toString());
             promise.reject(e);
         }
     }
@@ -68,7 +68,7 @@ public class PMModule extends ReactContextBaseJavaModule {
             WritableMap map = Arguments.createMap();
             promise.resolve(map);
         } catch (Exception e) {
-            Log.e(TAG, "Solve error: " + e.toString());
+            //Log.e(TAG, "Solve error: " + e.toString());
             promise.reject(e);
         }
     }
@@ -80,7 +80,7 @@ public class PMModule extends ReactContextBaseJavaModule {
             WritableMap map = Arguments.createMap();
             promise.resolve(map);
         } catch (Exception e) {
-            Log.e(TAG, "Solve error: " + e.toString());
+            //Log.e(TAG, "Solve error: " + e.toString());
             promise.reject(e);
         }
     }
@@ -92,7 +92,7 @@ public class PMModule extends ReactContextBaseJavaModule {
             WritableMap map = Arguments.createMap();
             promise.resolve(map);
         } catch (Exception e) {
-            Log.e(TAG, "Solve error: " + e.toString());
+            //Log.e(TAG, "Solve error: " + e.toString());
             promise.reject(e);
         }
     }
@@ -104,7 +104,7 @@ public class PMModule extends ReactContextBaseJavaModule {
             WritableMap map = Arguments.createMap();
             promise.resolve(map);
         } catch (Exception e) {
-            Log.e(TAG, "Solve error: " + e.toString());
+            //Log.e(TAG, "Solve error: " + e.toString());
             promise.reject(e);
         }
     }
@@ -131,10 +131,10 @@ public class PMModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public static void connectTo() {
         if(PMModule.ma.getIsConnected()!=-1) {
-            Log.d(TAG, "GOING TO CONNECT");
+            //Log.d(TAG, "GOING TO CONNECT");
             PMModule.ma.connectToDevice(PMModule.ma.getDevice());
         } else {
-            Log.d(TAG, "NOT CONNECTED");
+            //Log.d(TAG, "NOT CONNECTED");
             PMModule.ma.checkForDevices();
         }
     }
@@ -159,7 +159,7 @@ public class PMModule extends ReactContextBaseJavaModule {
             WritableMap map = Arguments.createMap();
             promise.resolve(map);
         } catch (Exception e) {
-            Log.e(TAG, "Solve error: " + e.toString());
+            //Log.e(TAG, "Solve error: " + e.toString());
             promise.reject(e);
         }
     }

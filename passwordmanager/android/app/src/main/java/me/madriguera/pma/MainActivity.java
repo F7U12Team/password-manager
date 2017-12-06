@@ -34,6 +34,11 @@ import android.util.Log;
 import cerrojoandroid.Cerrojoandroid;
 
 
+import android.content.Intent;
+import android.net.Uri;
+
+
+
 public class MainActivity extends ReactActivity {
 
     private String TAG = "MainActivity";
@@ -63,7 +68,7 @@ public class MainActivity extends ReactActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Log.d(TAG, "REGISTERED " + MainActivity.registered);
+        //Log.d(TAG, "REGISTERED " + MainActivity.registered);
         if(!MainActivity.registered) {
             MainActivity.registered = true;
             manager = (UsbManager) getSystemService(Context.USB_SERVICE);
@@ -84,7 +89,11 @@ public class MainActivity extends ReactActivity {
                 }
             }, 1000);
             PMModule.setMA(this);
+            GoogleDriveModule.setMA(this);
         }
+
+
+
     }
 
     @Override
@@ -96,11 +105,22 @@ public class MainActivity extends ReactActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "ON RESUME MAIN ACTIVITY");
+        //Log.d(TAG, "ON RESUME MAIN ACTIVITY");
         if(DropBoxModule.self!=null) {
             DropBoxModule.self.returnFromDropbox();
         }
+
+        if(GoogleDriveModule.self!=null) {
+            Uri data = getIntent().getData();
+
+            GoogleDriveModule.self.returnFromGoogleDrive(data);
+        }
+
     }
+
+
+    
+
 
     private final BroadcastReceiver usbManagerBroadcastReceiver = new BroadcastReceiver()
     {
@@ -120,22 +140,22 @@ public class MainActivity extends ReactActivity {
                             {
                                 if(PMModule.getSyncStatus()!=PMTypes.NONE) {
                                     fdint = connectToDevice(device);
-                                    Log.d(TAG,"device file descriptor: " + fdint);
+                                    //Log.d(TAG,"device file descriptor: " + fdint);
                                 } else {
-                                    Log.d(TAG,"SYNC STATUS NONE");
+                                    //Log.d(TAG,"SYNC STATUS NONE");
                                 }
                             }
                         }
                         else
                         {
-                            Log.d(TAG, "permission denied for device " + device);
+                            //Log.d(TAG, "permission denied for device " + device);
                         }
                     }
                 }
 
                 if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action))
                 {
-                    Log.d(TAG, "onDeviceConnected");
+                    //Log.d(TAG, "onDeviceConnected");
 
                     synchronized(this)
                     {
@@ -150,7 +170,7 @@ public class MainActivity extends ReactActivity {
 
                 if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action))
                 {
-                    Log.d(TAG, "onDeviceDisconnected");
+                    //Log.d(TAG, "onDeviceDisconnected");
                     isConnected = -1;
                     Cerrojoandroid.cleanData();
 
@@ -168,7 +188,7 @@ public class MainActivity extends ReactActivity {
 
                         int fd = connectedDevices.get(device.getDeviceId());
 
-                        Log.d(TAG, "device: " + device.getDeviceId() + " disconnected. fd: " + fd);
+                        //Log.d(TAG, "device: " + device.getDeviceId() + " disconnected. fd: " + fd);
                         connectedDevices.remove(device.getDeviceId());
                     }
 
@@ -176,7 +196,7 @@ public class MainActivity extends ReactActivity {
             }
             catch(Exception e)
             {
-                Log.d(TAG, "Exception: " + e);
+                //Log.d(TAG, "Exception: " + e);
             }
         }
     };
@@ -185,21 +205,21 @@ public class MainActivity extends ReactActivity {
     {
         connection = manager.openDevice(device);
         connection.claimInterface(device.getInterface(0), true);
-        Log.d(TAG, "inserting device with id: " + device.getDeviceId() + " and file descriptor: " + connection.getFileDescriptor());
+        //Log.d(TAG, "inserting device with id: " + device.getDeviceId() + " and file descriptor: " + connection.getFileDescriptor());
         String i = "\n" + "DeviceID: " + device.getDeviceId() + "\n"
                 + "DeviceName: " + device.getDeviceName() + "\n"
                 + "DeviceClass: " + device.getDeviceClass() + " - "
                 + "DeviceSubClass: " + device.getDeviceSubclass() + "\n"
                 + "VendorID: " + device.getVendorId() + "\n"
                 + "ProductID: " + device.getProductId() + "\n";
-        Log.d(TAG, i);
+        //Log.d(TAG, i);
         try {
             Cerrojoandroid.connect(connection.getFileDescriptor(), device.getDeviceName(), "trezor");
             fdint = connection.getFileDescriptor();
-            Log.d(TAG, "CONNECTED? " + fdint);
+            //Log.d(TAG, "CONNECTED? " + fdint);
         }catch(Exception e)
         {
-            Log.d(TAG, "Exception: " + e);
+            //Log.d(TAG, "Exception: " + e);
         }
         isConnected = device.getDeviceId();
         // TODO FIX THIS
@@ -218,7 +238,7 @@ public class MainActivity extends ReactActivity {
 
             if(device.getDeviceId()!=isConnected) {
                 if (device.getVendorId()==VID && device.getProductId()==PID) {
-                    Log.d(TAG, "Found a device: " + device + "   ID " + isConnected + "   ======  " + device.getDeviceId());
+                    //Log.d(TAG, "Found a device: " + device + "   ID " + isConnected + "   ======  " + device.getDeviceId());
                     manager.requestPermission(device, mPermissionIntent);
                 }
             }

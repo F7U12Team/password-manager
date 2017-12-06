@@ -1,6 +1,6 @@
 /*This is distributed under the Apache License v2.0
 
-Copyright 2017 F7U12 Team - pma@madriguera.me
+Copyright 2017-2018 F7U12 Team - pma@madriguera.me
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,15 +29,15 @@ import (
 
 	"fmt"
 
+	"encoding/csv"
+	"hash/fnv"
+	"io"
+	"strings"
+
 	"github.com/conejoninja/cerrojo"
 	"github.com/conejoninja/cerrojo/devices"
 	"github.com/conejoninja/cerrojo/transport"
 	"github.com/conejoninja/hid"
-	"github.com/stacktic/dropbox"
-	"encoding/csv"
-	"strings"
-	"io"
-	"hash/fnv"
 )
 
 var client cerrojo.Client
@@ -50,28 +50,11 @@ var filename string
 var encKey string
 var dataStorage cerrojo.Storage
 
-//pseudo const
-var dropboxClientId = map[string]string{
-	"trezor": "YOUR DROPBOX DATA",
-	"keepkey": "YOUR DROPBOX DATA",
-}
-var dropboxClientSecret = map[string]string{
-	"trezor": "YOUR DROPBOX DATA",
-	"keepkey": "YOUR DROPBOX DATA",
-}
-var dropboxPath = map[string]string{
-	"trezor": "YOUR DROPBOX DATA",
-	"keepkey": "YOUR DROPBOX DATA",
-}
-
 const appPath string = "/data/data/your.app.path.here/files"
 const allowSyncMerge = true
 const autoPassphrase = true
 
-var dropboxToken string
-var db *dropbox.Dropbox
-var downloadingFromDB bool
-var deviceType string
+const deviceType = "trezor"
 
 const (
 	emptyValue = iota
@@ -96,7 +79,7 @@ type EncData struct {
 
 type Entry struct {
 	entry cerrojo.Entry
-	id string
+	id    string
 }
 
 const emptyFileContent = `{"version":"0.0.1","config":{"orderType":"note"},"tags":{"0":{"title":"All","icon":"home"},"1":{"title":"Social","icon":"person-stalker"},"2":{"title":"Bitcoin","icon":"social-bitcoin"}},"entries":{}}`
@@ -105,6 +88,7 @@ type JavaCallback interface {
 	SendEvent(string, string)
 	SendToast(string)
 	SetDropboxStatus(bool)
+	SetGoogleDriveStatus(bool)
 }
 
 func RegisterJavaCallback(c JavaCallback) {
@@ -113,7 +97,7 @@ func RegisterJavaCallback(c JavaCallback) {
 
 func Connect(fdint int, path, dt string) {
 
-	deviceType = dt
+	//deviceType = dt
 	devicee := hid.GetUsbDevice()
 	device = &devicee
 
@@ -143,40 +127,6 @@ func Connect(fdint int, path, dt string) {
 
 	go GetLogins()
 	return
-}
-
-func DropboxToken(token string) {
-	if token == "" {
-		jc.SetDropboxStatus(false)
-	} else if dropboxToken != token {
-		dropboxToken = token
-		go dropboxInit()
-	}
-}
-
-func dropboxDownload(src, dst string) error {
-	return db.DownloadToFile(src, dst, "")
-}
-
-func dropboxUpload(src, dst string) (err error) {
-	_, err = db.UploadFile(src, dst, true, "")
-	if err != nil {
-		jc.SendEvent("goErrorDropbox", "")
-	}
-	return err
-}
-
-func dropboxInit() {
-	db = dropbox.NewDropbox()
-	db.SetAppInfo(dropboxClientId[deviceType], dropboxClientSecret[deviceType])
-	db.SetAccessToken(dropboxToken)
-	if _, err := db.CreateFolder(dropboxPath[deviceType]); err != nil {
-		fmt.Printf("-=[DROPBOX]=- Error creating folder %s: %s\n", dropboxPath[deviceType], err)
-		downloadingFromDB = true
-	} else {
-		fmt.Printf("-=[DROPBOX]=- Folder %s successfully created\n", dropboxPath[deviceType])
-	}
-	jc.SetDropboxStatus(true)
 }
 
 func call(msg []byte) (string, uint16) {
@@ -273,13 +223,14 @@ func routineGetLogins(str string) {
 	var content string
 	var contentByte []byte
 	var errOffline error
-	var errDropbox error
+	var errMerge error
+	var errGoogleDrive error
 	var data cerrojo.Storage
 
 	// OPEN FILE
 	contentByte, errOffline = readFile(appPath + "/" + filename)
 	if errOffline != nil {
-		fmt.Println("Error opening file " + filename)
+		//fmt.Println("Error opening file " + filename)
 		jc.SendEvent("goSetDataList", emptyFileContent)
 
 		errOffline = json.Unmarshal([]byte(emptyFileContent), &data)
@@ -293,21 +244,28 @@ func routineGetLogins(str string) {
 		data, errOffline = cerrojo.DecryptStorage(content, encKey)
 	}
 
-	if downloadingFromDB {
+	if downloadingFromDB || downloadingFromGD {
 		jc.SendEvent("goWaitSyncDialog", "")
+		fmt.Println("DOWNLOADING", downloadingFromDB, downloadingFromGD, filename)
+		if downloadingFromDB {
+			errMerge = dropboxDownload(dropboxPath[deviceType]+filename, appPath+"/tmp.pswd")
+		} else {
+			errMerge = googleDriveDownload(dropboxPath[deviceType]+filename, appPath+"/tmp.pswd")
+		}
 		downloadingFromDB = false
-		errDropbox = dropboxDownload(dropboxPath[deviceType]+filename, appPath+"/tmp.pswd")
-		if errDropbox == nil {
-			contentByte, errDropbox = readFile(appPath + "/tmp.pswd")
-			if errDropbox == nil {
+		downloadingFromGD = false
+		fmt.Println("ERROR MERGE", errMerge)
+		if errMerge == nil {
+			contentByte, errMerge = readFile(appPath + "/tmp.pswd")
+			if errMerge == nil {
 				contentDB := string(contentByte)
 				if contentDB != content {
 					// Use Dropbox version, we should do the merge here
 					if allowSyncMerge {
 						var dataDB cerrojo.Storage
-						dataDB, errDropbox = cerrojo.DecryptStorage(contentDB, encKey)
+						dataDB, errMerge = cerrojo.DecryptStorage(contentDB, encKey)
 						data = mergeStorages(dataDB, data)
-						if errDropbox == nil {
+						if errMerge == nil {
 							efile := cerrojo.EncryptStorage(data, encKey)
 							writeFile(filename, efile, true)
 						}
@@ -321,7 +279,7 @@ func routineGetLogins(str string) {
 		}
 	}
 
-	if errOffline != nil && errDropbox != nil {
+	if errOffline != nil && (errMerge != nil || errGoogleDrive != nil) {
 		return
 	}
 
@@ -329,7 +287,7 @@ func routineGetLogins(str string) {
 	dataStorage = data
 	resultByte, err := json.Marshal(data)
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 	}
 	// Send data to java
 	jc.SendEvent("goSetDataList", string(resultByte))
@@ -448,7 +406,6 @@ func routineSaveLogin(entries []Entry) {
 		dataStorage.Entries[lastEntry] = e.entry
 	}
 
-
 	efile := cerrojo.EncryptStorage(dataStorage, encKey)
 	writeFile(filename, efile, true)
 
@@ -520,13 +477,18 @@ func writeFile(filename string, content []byte, upload bool) {
 	}
 	err := ioutil.WriteFile(appPath+"/"+filename, content, 0644)
 	if err != nil {
-		fmt.Println("Unable to create File", err)
 		jc.SendEvent("goErrorDialog", "Unable to create file")
 		return
 	}
-	if upload && dropboxToken != "" {
-		// ASSUME TOKEN = USIG DROPBOX
-		go dropboxUpload(appPath+"/"+filename, dropboxPath[deviceType]+filename)
+	if upload {
+		if dropboxToken != "" {
+			// ASSUME TOKEN = USIG DROPBOX
+			go dropboxUpload(appPath+"/"+filename, dropboxPath[deviceType]+filename)
+		}
+		if googleDriveToken != "" {
+			// ASSUME TOKEN = USIG GOOGLEDRIVE
+			go googleDriveUpload(appPath+"/"+filename, dropboxPath[deviceType]+filename)
+		}
 	}
 }
 
@@ -549,7 +511,6 @@ func mergeStorages(one, two cerrojo.Storage) cerrojo.Storage {
 		found := false
 		for _, onev := range one.Entries {
 			if v.Equal(onev) {
-				fmt.Println("FOUND", v, onev)
 				found = true
 				break
 			}
@@ -565,10 +526,8 @@ func mergeStorages(one, two cerrojo.Storage) cerrojo.Storage {
 			}
 			lastEntry = strconv.Itoa(max + 1)
 			one.Entries[lastEntry] = v
-			fmt.Println("LAST ENTRY", lastEntry)
 		}
 	}
-
 
 	if one.Tags == nil {
 		one.Tags = make(map[string]cerrojo.Tag)
@@ -576,9 +535,8 @@ func mergeStorages(one, two cerrojo.Storage) cerrojo.Storage {
 
 	for k, v := range two.Tags {
 		found := false
-		for onek, onev := range one.Tags {
+		for onek, _ := range one.Tags {
 			if k == onek {
-				fmt.Println("FOUND", v, onev)
 				found = true
 				break
 			}
@@ -595,9 +553,8 @@ func ImportFile(file, format string) {
 func routineImportFile(file, format string) {
 	errStr := "Error importing file:"
 	content, err := readFile(file)
-	fmt.Println("IMPORTING FILE", file)
 	if err != nil {
-		jc.SendToast(fmt.Sprint(errStr,err))
+		jc.SendToast(fmt.Sprint(errStr, err))
 	}
 	if format == "lastpass" {
 		r := csv.NewReader(strings.NewReader(string(content)))
@@ -609,7 +566,7 @@ func routineImportFile(file, format string) {
 				break
 			}
 			if err != nil {
-				fmt.Println("ERROR FOR", err)
+				//fmt.Println("ERROR FOR", err)
 			}
 
 			if len(record) == 7 {
@@ -658,10 +615,9 @@ func routineImportFile(file, format string) {
 		jc.SendToast("File imported")
 
 	} else {
-		jc.SendToast(fmt.Sprint(errStr,"format unknown"))
+		jc.SendToast(fmt.Sprint(errStr, "format unknown"))
 	}
 }
-
 
 func simpleHash(s string) uint32 {
 	h := fnv.New32a()
